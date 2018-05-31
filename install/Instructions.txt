@@ -1,0 +1,114 @@
+Compiling instuctions mainly from 
+http://debabhishek.com/writes/Installing-and-Running-TextSecure-Signal-Server-on-Windows/
+
+Developement Machine:
+1. Install Java 1.8, jdk-8u162-windows-x64.exe
+%JAVA_HOME%=C:\Program Files\Java\jdk1.8.0_162
+%Path%=C:\ProgramData\Oracle\Java\javapath;%Path%;%JAVA_HOME%
+
+2. Intall Git, Git-2.16.2-64-bit.exe
+%Path%=%Path%;C:\Program Files\Git\cmd
+
+3. Install GPG4Win, gpg4win-vanilla-2.3.3.exe
+%GNUPGHOME%=C:\Program Files (x86)\GNU\GnuPG
+%Path%=%Path%;C:\Program Files (x86)\GNU\GnuPG\pub
+Start gpg2.exe
+
+2. Install Apache Maven 3.5.2, apache-maven-3.5.2-bin.zip
+Path: C:\Maven\apache-maven-3.5.2\
+%Path%=%Path%;C:\Maven\apache-maven-3.5.2\bin\;%JAVA_HOME%
+
+3. Clone Repository 
+https://github.com/easy-rider-7/SignalServer
+user: konkevych@hotmail.com
+pwd: Sxxx1xxx
+Path: D:\Projects\SecureTalk\Server\Signal-Server
+
+4. Clone Websocket-Resources Repository 0.5.3:
+https://github.com/easy-rider-7/WebSocket-Resources
+Path: D:\Projects\SecureTalk\Server\WebSocket-Resources
+
+5. Compile WebSocket-Resources, from the directory
+mvn clean install
+
+6. Add WebSocket-Resources in local maven repo:
+mvn install:install-file -Dfile=./library/target/websocket-resources-0.5.3.jar -DgroupId=org.whispersystems -DartifactId=websocket-resources -Dversion=0.5.3 -Dpackaging=jar
+
+4. Complile in the Signal-Server Path:
+mvn clean install -DskipTests
+
+5. PRoceed with Redis and PostgreSQL installation, steps 2-5 below 
+
+Installation:
+
+1. Install Java 1.8, jdk-8u162-windows-x64.exe
+%JAVA_HOME%=C:\Program Files\Java\jdk1.8.0_162
+%Path%=C:\ProgramData\Oracle\Java\javapath;%Path%;%JAVA_HOME%
+
+2. Install PostgreSql, postgresql-10.3-1-windows-x64.exe
+Path: C:\Program Files\PostgreSQL
+Port: 8082
+
+3. Install Redis, Redis-x64-3.2.100.exe
+Path: C:\Program Files\Redis
+Port: 8088
+
+4. Create 2 DBs in PgAdmin or from command line:
+createdb -U postgres accountsdb
+createdb -U postgres messagedb
+Password: postgres
+
+5. Import Table Schemas: (from inside Signal-Server folder)
+java -jar target/TextSecureServer-1.68.jar accountdb migrate config/signal-server.yml
+java -jar target/TextSecureServer-1.68.jar messagedb migrate config/signal-server.yml
+
+6. Import the valid bought SSL certificate or create a self-signed one.
+Self-signed certificate:
+"C:\Program Files\Java\jdk1.8.0_162\bin\keytool.exe" -genkeypair -keyalg RSA -dname "CN=<HostName>" -keystore host.keystore -keypass pa$$word -storepass pa$$word
+Place file host.keystore in .\config\  directory
+
+7. Create configuration file signal-server.yml
+ .1 Redis configuration:
+-------------------------------------------------------------------------
+cache: # Redis server configuration for cache cluster
+  url: "redis://localhost:8088/1"
+  
+directory: # Redis server configuration for directory cluster
+  url: "redis://localhost:8088/0"
+-------------------------------------------------------------------------
+
+ .2 PostgreSQL configuration:
+-------------------------------------------------------------------------
+messageStore: # Postgresql database configuration for message store
+  driverClass: org.postgresql.Driver
+  user: "postgres"
+  password: "postgres"
+  url: "jdbc:postgresql://localhost:8082/messagedb"
+
+database: # Postgresql database configuration
+  driverClass: org.postgresql.Driver
+  user: "postgres"
+  password: "postgres"
+  url: "jdbc:postgresql://localhost:8082/accountsdb"
+  properties:
+     charSet: UTF-8
+-------------------------------------------------------------------------
+
+ .3 Services configuration
+-------------------------------------------------------------------------  
+server:
+  applicationConnectors:
+    #- type: http
+    #  port: 80
+    - type: https
+      port: 443
+      keyStorePath: .\config\host.keystore
+      keyStorePassword: pa$$word
+      validateCerts: false
+
+  adminConnectors:
+    - type: http
+      port: 9091
+-------------------------------------------------------------------------
+
+
