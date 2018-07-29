@@ -1,6 +1,5 @@
 package org.whispersystems.textsecuregcm.tests.util;
 
-import com.amazonaws.HttpMethod;
 import org.junit.Test;
 import org.whispersystems.textsecuregcm.configuration.AttachmentsConfiguration;
 import org.whispersystems.textsecuregcm.s3.UrlSigner;
@@ -31,12 +30,13 @@ public class UrlSignerTest {
     AttachmentsConfiguration configuration = mock(AttachmentsConfiguration.class);
     when(configuration.getAccessKey()).thenReturn("foo");
     when(configuration.getAccessSecret()).thenReturn("bar");
+    when(configuration.getServer()).thenReturn("http://localhost");
     when(configuration.getBucket()).thenReturn("attachments-test");
 
     UrlSigner signer = new UrlSigner(configuration);
     URL url = signer.getPreSignedUrl("1234", true, true);
 
-    assertThat(url).hasHost("s3.amazonaws.com");
+    assertThat(url).hasHost("localhost");
   }
 
 }

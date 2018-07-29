@@ -16,7 +16,6 @@
  */
 package org.whispersystems.textsecuregcm.controllers;
 
-import com.amazonaws.HttpMethod;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Optional;
 import org.slf4j.Logger;
