@@ -19,6 +19,10 @@ public class ProfilesConfiguration {
   @NotEmpty
   @JsonProperty
   private String region;
+  
+  @NotEmpty
+  @JsonProperty
+  private String server;
 
   public String getAccessKey() {
     return accessKey;
@@ -30,6 +34,10 @@ public class ProfilesConfiguration {
 
   public String getBucket() {
     return bucket;
+  }
+  
+  public String getServer() {
+    return server;
   }
 
   public String getRegion() {

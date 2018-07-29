@@ -29,7 +29,6 @@ public class AttachmentControllerTest {
   private static RateLimiters             rateLimiters           = mock(RateLimiters.class            );
   private static RateLimiter              rateLimiter            = mock(RateLimiter.class             );
 
-  private static UrlSigner urlSigner;
 
   static {
     when(configuration.getAccessKey()).thenReturn("accessKey");
@@ -37,7 +36,6 @@ public class AttachmentControllerTest {
     when(configuration.getBucket()).thenReturn("attachment-bucket");
 
     when(rateLimiters.getAttachmentLimiter()).thenReturn(rateLimiter);
-    urlSigner = new UrlSigner(configuration);
   }
 
   @ClassRule
@@ -46,7 +44,7 @@ public class AttachmentControllerTest {
                                                                    .addProvider(new AuthValueFactoryProvider.Binder())
                                                                    .setMapper(SystemMapper.getMapper())
                                                                    .setTestContainerFactory(new GrizzlyWebTestContainerFactory())
-                                                                   .addResource(new AttachmentController(rateLimiters, federatedClientManager, urlSigner))
+                                                                   .addResource(new AttachmentController(rateLimiters, federatedClientManager, configuration))
                                                                    .build();
 
   @Test

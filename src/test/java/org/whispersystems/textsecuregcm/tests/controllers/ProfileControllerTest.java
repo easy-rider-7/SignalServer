@@ -31,7 +31,7 @@ public class ProfileControllerTest {
   static {
     when(configuration.getAccessKey()).thenReturn("accessKey");
     when(configuration.getAccessSecret()).thenReturn("accessSecret");
-    when(configuration.getRegion()).thenReturn("us-east-1");
+    //when(configuration.getRegion()).thenReturn("us-east-1");
     when(configuration.getBucket()).thenReturn("profile-bucket");
   }
 

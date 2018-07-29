@@ -33,6 +33,10 @@ public class AttachmentsConfiguration {
   @JsonProperty
   private String bucket;
 
+  @NotEmpty
+  @JsonProperty
+  private String server;
+  
   public String getAccessKey() {
     return accessKey;
   }
@@ -43,5 +47,9 @@ public class AttachmentsConfiguration {
 
   public String getBucket() {
     return bucket;
+  }
+  
+  public String getServer() {
+    return server;      
   }
 }

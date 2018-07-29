@@ -17,7 +17,7 @@ public class Profile {
 
   @JsonProperty
   private String avatar;
-
+  
   public Profile() {}
 
   public Profile(String name, String avatar, String identityKey) {
@@ -40,5 +40,4 @@ public class Profile {
   public String getAvatar() {
     return avatar;
   }
-
 }

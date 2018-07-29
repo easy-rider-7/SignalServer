@@ -44,6 +44,7 @@ import java.security.SecureRandom;
 import java.util.stream.Stream;
 
 import io.dropwizard.auth.Auth;
+import org.whispersystems.textsecuregcm.configuration.AttachmentsConfiguration;
 
 
 @Path("/v1/attachments")
@@ -59,11 +60,11 @@ public class AttachmentController {
 
   public AttachmentController(RateLimiters rateLimiters,
                               FederatedClientManager federatedClientManager,
-                              UrlSigner urlSigner)
+                              AttachmentsConfiguration configuration)
   {
     this.rateLimiters           = rateLimiters;
     this.federatedClientManager = federatedClientManager;
-    this.urlSigner              = urlSigner;
+    this.urlSigner              = new UrlSigner(configuration);
   }
 
   @Timed
@@ -77,7 +78,7 @@ public class AttachmentController {
     }
 
     long attachmentId = generateAttachmentId();
-    URL  url          = urlSigner.getPreSignedUrl(attachmentId, HttpMethod.PUT, Stream.of(UNACCELERATED_REGIONS).anyMatch(region -> account.getNumber().startsWith(region)));
+    URL  url          = urlSigner.getPreSignedUrl(String.valueOf(attachmentId), false, Stream.of(UNACCELERATED_REGIONS).anyMatch(region -> account.getNumber().startsWith(region)));
 
     return new AttachmentDescriptor(attachmentId, url.toExternalForm());
 
@@ -85,7 +86,7 @@ public class AttachmentController {
 
   @Timed
   @GET
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON) 
   @Path("/{attachmentId}")
   public AttachmentUri redirectToAttachment(@Auth                      Account account,
                                             @PathParam("attachmentId") long    attachmentId,
@@ -94,7 +95,7 @@ public class AttachmentController {
   {
     try {
       if (!relay.isPresent()) {
-        return new AttachmentUri(urlSigner.getPreSignedUrl(attachmentId, HttpMethod.GET, Stream.of(UNACCELERATED_REGIONS).anyMatch(region -> account.getNumber().startsWith(region))));
+        return new AttachmentUri(urlSigner.getPreSignedUrl(String.valueOf(attachmentId), true, Stream.of(UNACCELERATED_REGIONS).anyMatch(region -> account.getNumber().startsWith(region))));
       } else {
         return new AttachmentUri(federatedClientManager.getClient(relay.get()).getSignedAttachmentUri(attachmentId));
       }

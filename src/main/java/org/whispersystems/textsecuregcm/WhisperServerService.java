@@ -181,7 +181,6 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     ApnFallbackManager       apnFallbackManager  = new ApnFallbackManager(apnSender, pubSubManager);
     TwilioSmsSender          twilioSmsSender     = new TwilioSmsSender(config.getTwilioConfiguration());
     SmsSender                smsSender           = new SmsSender(twilioSmsSender);
-    UrlSigner                urlSigner           = new UrlSigner(config.getAttachmentsConfiguration());
     PushSender               pushSender          = new PushSender(apnFallbackManager, gcmSender, apnSender, websocketSender, config.getPushConfiguration().getQueueSize());
     ReceiptSender            receiptSender       = new ReceiptSender(accountsManager, pushSender, federatedClientManager);
     TurnTokenGenerator       turnTokenGenerator  = new TurnTokenGenerator(config.getTurnConfiguration());
@@ -191,7 +190,8 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     environment.lifecycle().manage(pubSubManager);
     environment.lifecycle().manage(pushSender);
 
-    AttachmentController attachmentController = new AttachmentController(rateLimiters, federatedClientManager, urlSigner);
+    AttachmentController attachmentController = new AttachmentController(rateLimiters, federatedClientManager, config.getAttachmentsConfiguration());
+    
     KeysController       keysController       = new KeysController(rateLimiters, keys, accountsManager, federatedClientManager);
     MessageController    messageController    = new MessageController(rateLimiters, pushSender, receiptSender, accountsManager, messagesManager, federatedClientManager);
     ProfileController    profileController    = new ProfileController(rateLimiters , accountsManager, config.getProfilesConfiguration());

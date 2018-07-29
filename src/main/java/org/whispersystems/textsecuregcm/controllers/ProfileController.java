@@ -1,5 +1,6 @@
 package org.whispersystems.textsecuregcm.controllers;
 
+import com.amazonaws.HttpMethod;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
@@ -33,8 +34,27 @@ import javax.ws.rs.core.Response;
 import java.security.SecureRandom;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.net.URL;
+import io.minio.MinioClient;
 
 import io.dropwizard.auth.Auth;
+import io.minio.errors.ErrorResponseException;
+import io.minio.errors.InsufficientDataException;
+import io.minio.errors.InternalException;
+import io.minio.errors.InvalidArgumentException;
+import io.minio.errors.InvalidBucketNameException;
+import io.minio.errors.InvalidEndpointException;
+import io.minio.errors.InvalidPortException;
+import io.minio.errors.NoResponseException;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Stream;
+import org.whispersystems.textsecuregcm.s3.UrlSigner;
+import org.xmlpull.v1.XmlPullParserException;
 
 @Path("/v1/profile")
 public class ProfileController {
@@ -45,32 +65,54 @@ public class ProfileController {
   private final PolicySigner        policySigner;
   private final PostPolicyGenerator policyGenerator;
 
-  private final AmazonS3            s3client;
-  private final String              bucket;
+  //private final AmazonS3            s3client;
+  private MinioClient         minioClient;
+  //private final UrlSigner     urlSigner;
+  private final String        bucket;
+
+  private final String              accessKey;
+  private final String              accessSecret;
 
   public ProfileController(RateLimiters rateLimiters,
                            AccountsManager accountsManager,
-                           ProfilesConfiguration profilesConfiguration)
+                           ProfilesConfiguration configuration)
   {
-    AWSCredentials         credentials         = new BasicAWSCredentials(profilesConfiguration.getAccessKey(), profilesConfiguration.getAccessSecret());
-    AWSCredentialsProvider credentialsProvider = new AWSStaticCredentialsProvider(credentials);
+    //AWSCredentials         credentials         = new BasicAWSCredentials(profilesConfiguration.getAccessKey(), profilesConfiguration.getAccessSecret());
+    //AWSCredentialsProvider credentialsProvider = new AWSStaticCredentialsProvider(credentials);
 
     this.rateLimiters       = rateLimiters;
     this.accountsManager    = accountsManager;
-    this.bucket             = profilesConfiguration.getBucket();
-    this.s3client           = AmazonS3Client.builder()
-                                            .withCredentials(credentialsProvider)
-                                            .withRegion(profilesConfiguration.getRegion())
-                                            .build();
+    this.bucket             = configuration.getBucket();
+    this.accessKey          = configuration.getAccessKey();
+    this.accessSecret       = configuration.getAccessSecret();
 
-    this.policyGenerator  = new PostPolicyGenerator(profilesConfiguration.getRegion(),
-                                                    profilesConfiguration.getBucket(),
-                                                    profilesConfiguration.getAccessKey());
+    this.policyGenerator  = new PostPolicyGenerator(configuration.getRegion(),
+                                                    configuration.getBucket(),
+                                                    configuration.getAccessKey());
+          
+    this.policySigner     = new PolicySigner(configuration.getAccessSecret(),
+                                             configuration.getRegion());
+    //this.urlSigner = new UrlSigner(configuration);
 
-    this.policySigner     = new PolicySigner(profilesConfiguration.getAccessSecret(),
-                                             profilesConfiguration.getRegion());
+    /*this.s3client           = AmazonS3Client.builder()
+    .withCredentials(credentialsProvider)
+    .withRegion(profilesConfiguration.getRegion())
+    .build();*/
+      try {
+          
+          URL serverURL = new URL(configuration.getServer());
+                    
+          this.minioClient      = new MinioClient(serverURL, this.accessKey, this.accessSecret);
+          
+      } catch (MalformedURLException ex) {
+          Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (InvalidEndpointException ex) {
+          Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (InvalidPortException ex) {
+          Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+      }
   }
-
+  
   @Timed
   @GET
   @Produces(MediaType.APPLICATION_JSON)
@@ -87,10 +129,12 @@ public class ProfileController {
     if (!accountProfile.isPresent()) {
       throw new WebApplicationException(Response.status(404).build());
     }
-
-    return new Profile(accountProfile.get().getName(),
-                       accountProfile.get().getAvatar(),
-                       accountProfile.get().getIdentityKey());
+    
+    Account numberAccount = accountProfile.get();
+        
+    return new Profile(numberAccount.getName(),
+                       numberAccount.getAvatar(),
+                       numberAccount.getIdentityKey());
   }
 
   @Timed
@@ -115,7 +159,29 @@ public class ProfileController {
     String               signature      = policySigner.getSignature(now, policy.second());
 
     if (previousAvatar != null && previousAvatar.startsWith("profiles/")) {
-      s3client.deleteObject(bucket, previousAvatar);
+        try {
+            minioClient.removeObject(bucket, previousAvatar);
+        } catch (InvalidBucketNameException ex) {
+            Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (NoSuchAlgorithmException ex) {
+            Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (InsufficientDataException ex) {
+            Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (InvalidKeyException ex) {
+            Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (NoResponseException ex) {
+            Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (XmlPullParserException ex) {
+            Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ErrorResponseException ex) {
+            Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (InternalException ex) {
+            Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (InvalidArgumentException ex) {
+            Logger.getLogger(ProfileController.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     account.setAvatar(objectName);

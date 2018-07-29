@@ -21,7 +21,7 @@ public class UrlSignerTest {
     when(configuration.getBucket()).thenReturn("attachments-test");
 
     UrlSigner signer = new UrlSigner(configuration);
-    URL url = signer.getPreSignedUrl(1234, HttpMethod.GET, false);
+    URL url = signer.getPreSignedUrl("1234", true, false);
 
     assertThat(url).hasHost("attachments-test.s3-accelerate.amazonaws.com");
   }
@@ -34,7 +34,7 @@ public class UrlSignerTest {
     when(configuration.getBucket()).thenReturn("attachments-test");
 
     UrlSigner signer = new UrlSigner(configuration);
-    URL url = signer.getPreSignedUrl(1234, HttpMethod.GET, true);
+    URL url = signer.getPreSignedUrl("1234", true, true);
 
     assertThat(url).hasHost("s3.amazonaws.com");
   }

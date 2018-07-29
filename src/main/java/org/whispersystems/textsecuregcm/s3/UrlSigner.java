@@ -16,44 +16,97 @@
  */
 package org.whispersystems.textsecuregcm.s3;
 
-import com.amazonaws.HttpMethod;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.S3ClientOptions;
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import org.whispersystems.textsecuregcm.configuration.AttachmentsConfiguration;
+import io.minio.*;
+import io.minio.errors.ErrorResponseException;
+import io.minio.errors.InsufficientDataException;
+import io.minio.errors.InternalException;
+import io.minio.errors.InvalidBucketNameException;
+import io.minio.errors.InvalidEndpointException;
+import io.minio.errors.InvalidExpiresRangeException;
+import io.minio.errors.InvalidPortException;
+import io.minio.errors.NoResponseException;
+import java.io.IOException;
+import java.net.MalformedURLException;
 
 import java.net.URL;
-import java.util.Date;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.xmlpull.v1.XmlPullParserException;
 
 public class UrlSigner {
 
-  private static final long   DURATION = 60 * 60 * 1000;
+  private static final Integer   DURATION_IN_SECONDS = 60 * 60;
 
-  private final AWSCredentials credentials;
+  private final String accessKey;
+  private final String accessSecret;
   private final String bucket;
+  private URL serverURL; 
 
   public UrlSigner(AttachmentsConfiguration config) {
-    this.credentials = new BasicAWSCredentials(config.getAccessKey(), config.getAccessSecret());
-    this.bucket      = config.getBucket();
+    //this.credentials = new BasicAWSCredentials(config.getAccessKey(), config.getAccessSecret());
+    this.bucket = config.getBucket();
+    this.accessKey = config.getAccessKey();
+    this.accessSecret = config.getAccessSecret();
+    try {
+          this.serverURL = new URL(config.getServer());
+     } catch (MalformedURLException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+          this.serverURL = null;
+     }
   }
 
-  public URL getPreSignedUrl(long attachmentId, HttpMethod method, boolean unaccelerated) {
-    AmazonS3                    client  = new AmazonS3Client(credentials);
-    GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucket, String.valueOf(attachmentId), method);
-    
-    request.setExpiration(new Date(System.currentTimeMillis() + DURATION));
-    request.setContentType("application/octet-stream");
+  public URL getPreSignedUrl(String objectName, boolean isGet, boolean unaccelerated)  {
+      try {
+          //    AmazonS3                    client  = new AmazonS3Client(credentials);
+          //GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucket, String.valueOf(attachmentId), method);
+          
+          //request.setExpiration(new Date(System.currentTimeMillis() + DURATION));
+          //request.setContentType("application/octet-stream");
+          
+          /*if (unaccelerated) {
+          client.setS3ClientOptions(S3ClientOptions.builder().setPathStyleAccess(true).build());
+          } else {
+          client.setS3ClientOptions(S3ClientOptions.builder().setAccelerateModeEnabled(true).build());
+          }*/
+          MinioClient client = new MinioClient(this.serverURL, this.accessKey, this.accessSecret);
+          String urlString = (isGet) ? 
+                                client.presignedGetObject(bucket, objectName, DURATION_IN_SECONDS) :
+                                client.presignedPutObject(bucket, objectName, DURATION_IN_SECONDS);
+        
+        return new URL(urlString);//client.generatePresignedUrl(request
 
-    if (unaccelerated) {
-      client.setS3ClientOptions(S3ClientOptions.builder().setPathStyleAccess(true).build());
-    } else {
-      client.setS3ClientOptions(S3ClientOptions.builder().setAccelerateModeEnabled(true).build());
-    }
-
-    return client.generatePresignedUrl(request);
+      } catch (InvalidEndpointException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (InvalidPortException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (MalformedURLException ex) {
+        Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (InvalidBucketNameException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (NoSuchAlgorithmException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (InsufficientDataException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (IOException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (InvalidKeyException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (NoResponseException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (XmlPullParserException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (ErrorResponseException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (InternalException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (InvalidExpiresRangeException ex) {
+          Logger.getLogger(UrlSigner.class.getName()).log(Level.SEVERE, null, ex);
+      }
+    return null;
   }
-
 }
+    
+
