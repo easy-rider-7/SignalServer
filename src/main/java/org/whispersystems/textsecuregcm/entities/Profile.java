@@ -17,13 +17,17 @@ public class Profile {
 
   @JsonProperty
   private String avatar;
+
+  @JsonProperty
+  private String serverUrl;
   
   public Profile() {}
 
-  public Profile(String name, String avatar, String identityKey) {
+  public Profile(String name, String avatar, String identityKey, String serverUrl) {
     this.name        = name;
     this.avatar      = avatar;
-    this.identityKey = identityKey;
+    this.identityKey = identityKey;   
+    this.serverUrl   = serverUrl; 
   }
 
   @VisibleForTesting
@@ -39,5 +43,10 @@ public class Profile {
   @VisibleForTesting
   public String getAvatar() {
     return avatar;
+  }
+  
+  @VisibleForTesting
+  public String getServerUrl() {
+    return serverUrl;
   }
 }

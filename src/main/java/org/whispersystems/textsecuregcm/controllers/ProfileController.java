@@ -52,19 +52,19 @@ import org.xmlpull.v1.XmlPullParserException;
 @Path("/v1/profile")
 public class ProfileController {
 
-  private final RateLimiters     rateLimiters;
-  private final AccountsManager  accountsManager;
+  private final RateLimiters rateLimiters;
+  private final AccountsManager accountsManager;
 
-  private final PolicySigner        policySigner;
+  private final PolicySigner policySigner;
   private final PostPolicyGenerator policyGenerator;
 
-  //private final AmazonS3            s3client;
-  private MinioClient         minioClient;
-  //private final UrlSigner     urlSigner;
-  private final String        bucket;
+  private MinioClient minioClient;
+  private final String bucket;
 
-  private final String              accessKey;
-  private final String              accessSecret;
+  private final String accessKey;
+  private final String accessSecret;
+  
+  private String profilesUrl;
 
   public ProfileController(RateLimiters rateLimiters,
                            AccountsManager accountsManager,
@@ -94,6 +94,8 @@ public class ProfileController {
       try {
           
           URL serverURL = new URL(configuration.getServer());
+          
+          this.profilesUrl = (new URL(serverURL, this.bucket)).toString();
                     
           this.minioClient      = new MinioClient(serverURL, this.accessKey, this.accessSecret);
           
@@ -127,7 +129,8 @@ public class ProfileController {
         
     return new Profile(numberAccount.getName(),
                        numberAccount.getAvatar(),
-                       numberAccount.getIdentityKey());
+                       numberAccount.getIdentityKey(),
+                       this.profilesUrl);
   }
 
   @Timed
@@ -180,8 +183,14 @@ public class ProfileController {
     account.setAvatar(objectName);
     accountsManager.update(account);
 
-    return new ProfileAvatarUploadAttributes(objectName, policy.first(), "private", "AWS4-HMAC-SHA256",
-                                             now.format(PostPolicyGenerator.AWS_DATE_TIME), policy.second(), signature);
+    return new ProfileAvatarUploadAttributes(objectName, 
+                                        policy.first(),
+                                        "private",
+                                        "AWS4-HMAC-SHA256", 
+                                        now.format(PostPolicyGenerator.AWS_DATE_TIME),
+                                        policy.second(),
+                                        signature,
+                                        this.profilesUrl);
   }
 
   private String generateAvatarObjectName() {
